@@ -11,13 +11,13 @@ The first release is intended for teams of approximately 2–20 people that need
 - Let a team create its first shared authenticator in under five minutes.
 - Let an authorized member find and copy a code in a few seconds.
 - Ensure members only see vaults assigned to them.
-- Protect stored authenticator secrets with zero-knowledge encryption.
+- Protect stored authenticator secrets with managed envelope encryption.
 - Give administrators a clear history of access and security-sensitive changes.
 - Make member removal and authenticator rotation explicit and safe.
 
 ### Product principles
 
-- The server must not receive plaintext TOTP seeds or generated codes.
+- TOTP seeds and generated codes must never appear in logs, analytics, URLs, or backups in plaintext.
 - Daily code access should be fast and understandable.
 - Administrative power and security limitations must be visible to users.
 - Removing access must never be presented as erasing secrets a member could have previously copied.
@@ -31,7 +31,7 @@ The first release is intended for teams of approximately 2–20 people that need
 - **Vault:** A named collection of shared authenticators, such as Engineering, Finance, or Client A.
 - **Authenticator:** An encrypted TOTP seed and its associated display and algorithm settings.
 - **Rotation:** Replacing an authenticator seed at the originating third-party service.
-- **Recovery kit:** A locally generated credential that can restore access to a user's encrypted key material.
+- **Email login code:** A short-lived, single-use code sent to a user's email to verify identity and start a session.
 
 ## 3. Roles and authorization
 
@@ -55,75 +55,56 @@ All admins are peers. The workspace creator becomes its first admin. The last re
 
 ### 4.1 Registration, login, and session security
 
-#### AUTH-01 — Create an account
+#### AUTH-01 — Request a sign-in code
 
-As a new user, I want to create an account with my email address and a master passphrase so that I can join or create a workspace.
-
-**Acceptance criteria**
-
-- Given an unused, valid email address, when the user completes registration and verifies the address, then the account is activated.
-- Given an invalid or already registered email address, when registration is submitted, then the application shows a safe, non-sensitive error.
-- Given account creation, when cryptographic identity material is generated, then generation occurs in the browser.
-- The master passphrase must not be logged, stored in plaintext, or disclosed to the application server.
-
-#### AUTH-02 — Sign in and unlock assigned vaults
-
-As a user, I want one sign-in action to authenticate me and unlock my assigned vaults so that I do not have to enter a separate vault password.
+As a user, I want to enter only my email address so that I can sign in without creating or remembering a password.
 
 **Acceptance criteria**
 
-- Given valid credentials, when the user signs in, then the browser authenticates the account and unlocks the user's encrypted private key.
-- Given an invalid passphrase, when sign-in is attempted, then no encrypted workspace data is unlocked.
-- Given a member account, when sign-in succeeds, then only assigned vaults are listed.
-- Given an admin account, when sign-in succeeds, then every workspace vault is available.
-- Authentication should use an audited implementation of OPAQUE or an equivalently reviewed augmented password-authenticated key exchange. Cryptographic primitives must not be implemented in application code.
+- A valid email request creates a six-digit login challenge and queues an email notification.
+- Email addresses are trimmed and normalized to lowercase before lookup or storage.
+- Requesting a code does not create a user record.
+- Only one active code exists per email, and issuing a new code invalidates the previous code.
+- Codes expire after ten minutes and are stored only as a slow hash of a server-peppered value.
+- Responses do not disclose whether the email already belongs to a user.
+- A user must wait 60 seconds before requesting another code.
 
-#### AUTH-03 — End and expire sessions
+#### AUTH-02 — Verify a sign-in code
 
-As a user, I want my session to lock after inactivity and when I sign out so that decrypted secrets do not remain available unnecessarily.
-
-**Acceptance criteria**
-
-- Given an unlocked session, when the configured inactivity period elapses, then decrypted vault state is discarded and the user must unlock again.
-- Given a user who signs out, when sign-out completes, then session credentials and decrypted key material are removed from browser-accessible application state.
-- Given multiple signed-in devices, when one session is revoked by an admin or the user, then that session cannot request new encrypted workspace data.
-- Decrypted seeds must not be written to local storage, IndexedDB, browser caches, analytics, or error reports.
-
-### 4.2 Recovery
-
-#### REC-01 — Create a recovery kit
-
-As a user, I want a recovery kit so that I can restore encrypted access if I forget my master passphrase.
+As a user, I want to enter the code from my email so that I can verify my address and start an authenticated session.
 
 **Acceptance criteria**
 
-- Given a newly created account, when onboarding is completed, then the browser generates a high-entropy recovery credential.
-- The user can download or print the recovery kit.
-- The application requires the user to confirm that the kit was saved before onboarding is considered complete.
-- The plaintext recovery credential is never sent to or stored by the server.
+- A valid code creates the user when the normalized email is new.
+- A valid code sets `email_verified_at`, consumes the challenge, authenticates the user, and regenerates the session ID.
+- An existing user signs in without creating a duplicate record.
+- Invalid, expired, consumed, or superseded codes are rejected.
+- Five incorrect attempts invalidate the active challenge.
+- Verification uses the pending email and challenge stored in the session, not client-provided identity fields.
 
-#### REC-02 — Recover with a recovery kit
+#### AUTH-03 — Resend a sign-in code
 
-As a user, I want to use my recovery kit to set a new master passphrase so that I can regain access to my existing vault grants.
-
-**Acceptance criteria**
-
-- Given the correct email verification and recovery credential, when recovery succeeds, then the user's private key is re-encrypted under the new passphrase.
-- Given an incorrect or modified recovery credential, when recovery is attempted, then no key material is recovered.
-- Successful and failed recovery attempts are rate-limited and recorded without logging recovery secrets.
-
-#### REC-03 — Recover without a recovery kit
-
-As a user who lost all recovery material, I want an admin-assisted path back into the workspace so that I can receive fresh access.
+As a user, I want to request a replacement code so that I can continue if the original email is delayed or unavailable.
 
 **Acceptance criteria**
 
-- Given a user without a valid recovery kit, then the service cannot decrypt or restore the old cryptographic identity.
-- An admin can remove the inaccessible membership and send a new invitation.
-- The replacement account receives a new cryptographic identity and new vault-key grants.
-- The removal creates rotation tasks for authenticators the old identity could access.
+- Resend is unavailable until the 60-second cooldown ends.
+- A replacement code receives a new challenge generation and invalidates all older codes.
+- Superseded queued notifications are discarded before delivery.
+- Send and verification attempts are rate-limited by hashed email and IP identifiers.
 
-### 4.3 Workspace and membership
+#### AUTH-04 — End and expire sessions
+
+As a user, I want to sign out and have inactive sessions expire so that my account is not left accessible.
+
+**Acceptance criteria**
+
+- Successful login uses Laravel's session guard without remember-me behavior.
+- Signing out invalidates the session and regenerates the CSRF token.
+- Sessions expire after 120 minutes according to the configured session lifetime.
+- Guests are redirected to the login screen when requesting protected pages.
+
+### 4.2 Workspace and membership
 
 #### TEAM-01 — Create a workspace
 
@@ -143,7 +124,7 @@ As an admin, I want to invite someone by email and select their vault access so 
 
 - An admin can choose the invited user's role and initial vault assignments.
 - An invitation is single-use, expires, and is bound to the invited email address.
-- Vault keys included in an invitation are encrypted before leaving the admin's browser.
+- Vault access is granted only after the invitation is accepted by the intended email address.
 - Given an expired, revoked, modified, or already accepted invitation, when acceptance is attempted, then access is denied.
 - Accepted, expired, and revoked invitations are recorded in the audit log.
 
@@ -153,7 +134,7 @@ As an admin, I want to change a member's role and vault assignments so that thei
 
 **Acceptance criteria**
 
-- Adding vault access creates a new encrypted vault-key grant for that member.
+- Adding vault access creates an explicit authorization grant for that member.
 - Removing vault access prevents the member from fetching current or future encrypted data for that vault.
 - Promoting a member to admin grants access to all workspace vaults.
 - Demoting an admin to member requires explicit vault assignments.
@@ -166,14 +147,13 @@ As an admin, I want to remove a member immediately so that they cannot continue 
 
 **Acceptance criteria**
 
-- Removal revokes the user's workspace membership and all wrapped vault-key grants.
-- Affected vaults are rekeyed so the removed member cannot decrypt future vault updates with old keys.
+- Removal revokes the user's workspace membership and all vault authorization grants.
 - Existing sessions belonging to the removed member are revoked.
 - The application creates a rotation task for every authenticator the member could previously access.
 - Before confirmation, the admin is warned that removal cannot erase seeds or codes previously copied by the member.
-- The member removal and resulting rekey operation are recorded in the audit log.
+- The member removal and resulting access revocation are recorded in the audit log.
 
-### 4.4 Vault management
+### 4.3 Vault management
 
 #### VAULT-01 — Create and name a vault
 
@@ -207,7 +187,7 @@ As an admin, I want to delete an unused vault safely so that obsolete encrypted 
 - A non-empty vault cannot be deleted until its authenticators are moved, rotated, or explicitly confirmed for deletion.
 - Deletion revokes its grants and records the operation in the audit log.
 
-### 4.5 Adding and managing authenticators
+### 4.4 Adding and managing authenticators
 
 #### TOTP-01 — Scan a QR code with the camera
 
@@ -250,9 +230,9 @@ As an admin, I want to review and save an authenticator into a vault so that aut
 **Acceptance criteria**
 
 - The admin must select a vault and confirm the parsed fields before saving.
-- The seed and descriptive fields are encrypted in the browser with the vault key.
-- Only ciphertext, non-secret cryptographic metadata, and authorization metadata are sent to the server.
-- The server must be unable to calculate a code from the stored record.
+- The server encrypts the seed and descriptive fields with managed envelope encryption before persistence.
+- Plaintext seed material must not be written to logs, analytics, queues, caches, or backups.
+- The data-encryption key must be protected by a separately managed key-encryption key.
 - Potential duplicates within the unlocked workspace are flagged before saving but can be confirmed by the admin.
 
 #### TOTP-05 — Edit, move, or archive an authenticator
@@ -267,7 +247,7 @@ As an admin, I want to maintain authenticator records so that the vault stays ac
 - Archived authenticators do not appear on the default member dashboard.
 - Secret values and generated codes never appear in audit events.
 
-### 4.6 Using TOTP codes
+### 4.5 Using TOTP codes
 
 #### CODE-01 — Find an authenticator
 
@@ -313,7 +293,7 @@ As a user, I want to know when my device clock may be inaccurate so that I can u
 - If clock drift exceeds the supported tolerance, the UI shows a warning and instructions to enable automatic time synchronization.
 - The application does not silently adjust TOTP generation using an untrusted offset.
 
-### 4.7 Audit history
+### 4.6 Audit history
 
 #### AUDIT-01 — Review workspace activity
 
@@ -323,8 +303,8 @@ As an admin, I want to review access and change history so that I can investigat
 
 - Admins can filter events by user, vault, event type, and date.
 - Events include actor, action, affected resource identifier, timestamp, and result.
-- Events cover reveal, copy, membership changes, vault changes, authenticator changes, invitations, recovery, rekeying, and rotation completion.
-- Audit details must never contain passphrases, recovery credentials, TOTP seeds, generated codes, or decrypted labels unless those labels are encrypted for authorized admins.
+- Events cover reveal, copy, membership changes, vault changes, authenticator changes, invitations, access revocation, and rotation completion.
+- Audit details must never contain email login codes, TOTP seeds, generated codes, or decrypted labels unless those labels are encrypted for authorized admins.
 
 #### AUDIT-02 — Detect audit-log modification
 
@@ -337,7 +317,7 @@ As an admin, I want audit events to be tamper-evident so that unexpected modific
 - Audit records cannot be edited or deleted through the product.
 - Documentation states that a malicious or modified client may omit an access event and that the log is not proof that a previously decrypted seed was never retained.
 
-### 4.8 Rotation and offboarding
+### 4.7 Rotation and offboarding
 
 #### ROT-01 — Review required rotations
 
@@ -363,25 +343,25 @@ As an admin, I want to replace an authenticator after rotating it at the origina
 
 ## 5. Security and privacy requirements
 
-### SEC-01 — Zero-knowledge storage
+### SEC-01 — Managed encrypted storage
 
-- TOTP seeds, issuer labels, account labels, vault names, and sensitive audit details must be encrypted before transmission.
+- TOTP seeds, issuer labels, account labels, vault names, and sensitive audit details must use authenticated encryption at rest.
 - Each vault must use an independent, randomly generated data-encryption key.
-- Vault keys must be wrapped independently for each authorized user.
-- Authenticated encryption must detect ciphertext modification.
-- Encryption keys and encrypted data must be logically separated in storage.
+- Data-encryption keys must be protected through envelope encryption with a separately managed key-encryption key.
+- Encryption keys and encrypted data must be logically separated and support rotation.
+- The service may technically decrypt vault data, and this trust boundary must be documented accurately.
 
-### SEC-02 — Client-side TOTP generation
+### SEC-02 — TOTP generation
 
 - TOTP generation must conform to RFC 6238 and pass its published test vectors.
-- Seeds and generated codes must exist only in the authorized browser's volatile application memory.
-- Codes must never be generated by an API endpoint, background job, database function, analytics service, or logging system.
+- Plaintext seeds and generated codes must exist only for the shortest required processing period.
+- Seeds and generated codes must never enter analytics, logs, URLs, queue payloads, or unencrypted persistence.
 
-### SEC-03 — Rekeying and revocation
+### SEC-03 — Authorization and revocation
 
-- Removing access must revoke server authorization before or atomically with publishing rekeyed vault data.
-- Rekeying failures must leave the vault in a recoverable state and must not partially grant access.
-- The product must explain that cryptographic revocation cannot erase a seed previously seen or copied by a member.
+- Every vault read or code-generation request must enforce current workspace and vault authorization.
+- Removing access must revoke server authorization and active sessions immediately.
+- Revocation must not leave partial or stale authorization grants.
 
 ### SEC-04 — Web application hardening
 
@@ -393,17 +373,16 @@ As an admin, I want to replace an authenticator after rotating it at the origina
 
 ### SEC-05 — Threat-model boundaries
 
-The zero-knowledge design must protect against:
+The managed-encryption design must protect against:
 
 - Database or backup disclosure.
-- An operator reading stored application data.
 - A user attempting to fetch vaults they were never assigned.
-- A removed user decrypting future vault revisions with revoked keys.
+- A removed user requesting new authenticator codes after revocation.
 
 V1 does not claim to protect against:
 
 - A compromised browser, operating system, or browser extension.
-- Malicious frontend code delivered by a compromised production deployment.
+- Compromise of the application runtime or managed encryption keys.
 - An authorized member recording a seed or code while they have access.
 - Phishing or real-time relay of a valid TOTP code.
 - Compromise of the originating third-party service.
@@ -434,17 +413,17 @@ V1 does not claim to protect against:
 - Network interruption must not corrupt encrypted records or membership changes.
 - Mutating operations must be idempotent or safely retryable.
 - Security-sensitive partial failures must be visible to the initiating admin.
-- Backups must preserve ciphertext, wrapped keys, audit chains, and recovery metadata without introducing plaintext copies.
+- Backups must preserve ciphertext, key references, and audit chains without introducing plaintext copies.
 
 ## 7. Release acceptance criteria
 
 V1 is ready for release when:
 
-- A new admin can create a workspace, save a recovery kit, add an authenticator, create a vault, and invite a member.
+- A new admin can verify an email, create a workspace, add an authenticator, create a vault, and invite a member.
 - The invited member can sign in and reveal or copy codes only from assigned vaults.
 - TOTP output passes RFC test vectors for all supported algorithms and digit counts.
 - Automated tests demonstrate that APIs, logs, databases, analytics, and backups do not contain plaintext secrets or codes.
-- Role changes, revocation, recovery, rekeying, audit verification, and rotation workflows pass end-to-end tests.
+- Passwordless login, role changes, revocation, audit verification, and rotation workflows pass end-to-end tests.
 - Camera denial, malformed QR codes, invalid manual input, expired invitations, clock drift, and network failures have safe and understandable outcomes.
 - Accessibility testing confirms the core journeys meet WCAG 2.2 AA.
 - Independent security review findings classified as critical or high have been resolved.
@@ -468,4 +447,6 @@ V1 is ready for release when:
 - All admins are trusted with potential access to all workspace vaults.
 - Authenticator codes are hidden until individually revealed or copied.
 - The service is online-only in V1.
+- Authentication uses a six-digit email code with a ten-minute expiry, five attempts, and a 60-second resend cooldown.
+- V1 uses managed envelope encryption; detailed vault encryption implementation remains future work.
 - Rotation is completed at the originating service by an admin and tracked through an in-product checklist.
