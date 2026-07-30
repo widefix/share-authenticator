@@ -21,5 +21,6 @@ class UserSchemaTest extends TestCase
         ], Schema::getColumnListing('users'));
 
         $this->assertFalse(Schema::hasTable('password_reset_tokens'));
+        $this->assertTrue(Schema::hasTable('email_login_codes'));
     }
 }

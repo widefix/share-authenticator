@@ -7,3 +7,13 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer base {
+    html {
+        text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+        background: color-mix(in srgb, oklch(52.7% 0.154 150.069) 28%, transparent);
+    }
+}
