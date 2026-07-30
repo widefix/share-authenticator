@@ -7,6 +7,26 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Local development
+
+Start Mailpit, which captures development email without delivering it to the
+internet:
+
+```bash
+docker compose up -d mailpit
+```
+
+Then start Laravel, the database queue worker, and Vite:
+
+```bash
+composer run dev
+```
+
+The application is available at [http://127.0.0.1:8001](http://127.0.0.1:8001)
+and the Mailpit inbox at [http://127.0.0.1:8025](http://127.0.0.1:8025).
+Login emails are queued, so the queue worker included in `composer run dev`
+must remain running.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
