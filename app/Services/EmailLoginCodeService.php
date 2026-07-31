@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\IssuedLoginCode;
 use App\Data\LoginCodeVerification;
 use App\Enums\LoginCodeVerificationStatus;
 use App\Models\EmailLoginCode;
@@ -18,10 +19,7 @@ class EmailLoginCodeService
 
     public const MAX_ATTEMPTS = 5;
 
-    /**
-     * @return array{email: string, generation: string}
-     */
-    public function issue(string $email): array
+    public function issue(string $email): IssuedLoginCode
     {
         $email = $this->normalizeEmail($email);
         $generation = (string) Str::uuid();
@@ -44,7 +42,7 @@ class EmailLoginCodeService
         Notification::route('mail', $email)
             ->notify(new EmailLoginCodeNotification($email, $generation, $code));
 
-        return compact('email', 'generation');
+        return new IssuedLoginCode($email, $generation);
     }
 
     public function verify(string $email, string $generation, string $code): LoginCodeVerification

@@ -172,6 +172,29 @@ class EmailOtpAuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_verification_middleware_limits_malformed_attempts(): void
+    {
+        Notification::fake();
+
+        $this->post(route('login.store'), ['email' => 'malformed@example.com']);
+
+        foreach (range(1, 5) as $attempt) {
+            $this->from(route('login.verify'))
+                ->post(route('login.authenticate'), ['code' => 'invalid'])
+                ->assertRedirect(route('login.verify'))
+                ->assertSessionHasErrors('code');
+        }
+
+        $this->post(route('login.authenticate'), ['code' => 'invalid'])
+            ->assertRedirect(route('login'))
+            ->assertHeader('Retry-After')
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('email_login_codes', [
+            'email' => 'malformed@example.com',
+        ]);
+    }
+
     public function test_expired_code_is_rejected_and_deleted(): void
     {
         Notification::fake();
@@ -202,6 +225,7 @@ class EmailOtpAuthenticationTest extends TestCase
 
         $this->post(route('login.resend'))
             ->assertRedirect(route('login.verify'))
+            ->assertHeader('Retry-After')
             ->assertSessionHasErrors('resend');
 
         $this->assertSame(
@@ -273,7 +297,7 @@ class EmailOtpAuthenticationTest extends TestCase
         $firstNotification = $this->sentLoginNotification();
         $second = $service->issue('latest@example.com');
 
-        $this->assertNotSame($first['generation'], $second['generation']);
+        $this->assertNotSame($first->generation, $second->generation);
         $this->assertFalse($firstNotification->shouldSend(new AnonymousNotifiable, 'mail'));
     }
 
