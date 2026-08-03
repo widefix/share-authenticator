@@ -148,7 +148,7 @@ final readonly class VaultService
             }
 
             $summary = new DeletedVault(
-                authenticatorCount: 0,
+                authenticatorCount: $vault->authenticators()->count(),
                 memberCount: $actor->workspace->users()->count(),
             );
 

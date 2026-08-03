@@ -14,7 +14,9 @@ final class DashboardController extends Controller
     {
         $user = $request->user()->load('workspace');
         $vaults = $user->isWorkspaceAdmin()
-            ? $user->workspace?->vaults()->active()->orderBy('name')->get() ?? collect()
+            ? $user->workspace?->vaults()->active()->withCount([
+                'authenticators as active_authenticators_count' => fn ($query) => $query->active(),
+            ])->orderBy('name')->get() ?? collect()
             : collect();
 
         return $this->responses->show($user, $vaults);

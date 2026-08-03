@@ -28,8 +28,8 @@ final class VaultController extends Controller
             ->workspace()
             ->withCount('users')
             ->firstOrFail();
-        $activeVaults = $workspace->vaults()->active()->orderBy('name')->get();
-        $archivedVaults = $workspace->vaults()->archived()->orderBy('name')->get();
+        $activeVaults = $workspace->vaults()->active()->withCount('authenticators')->orderBy('name')->get();
+        $archivedVaults = $workspace->vaults()->archived()->withCount('authenticators')->orderBy('name')->get();
 
         return $this->responses->index($workspace, $activeVaults, $archivedVaults);
     }
