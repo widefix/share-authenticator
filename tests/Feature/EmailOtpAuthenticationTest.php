@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\EmailLoginCode;
 use App\Models\User;
 use App\Notifications\EmailLoginCodeNotification;
-use App\Services\EmailLoginCodeService;
+use App\Services\Auth\EmailLoginCodeService;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;

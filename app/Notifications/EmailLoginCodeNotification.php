@@ -3,7 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\EmailLoginCode;
-use App\Services\EmailLoginCodeService;
+use App\Services\Auth\EmailLoginCodeService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
