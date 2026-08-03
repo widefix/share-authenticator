@@ -18,6 +18,8 @@ class UserSchemaTest extends TestCase
             'email_verified_at',
             'created_at',
             'updated_at',
+            'workspace_id',
+            'role',
         ], Schema::getColumnListing('users'));
 
         $this->assertFalse(Schema::hasTable('password_reset_tokens'));
