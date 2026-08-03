@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Auth\EmailLoginController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\VaultArchiveController;
+use App\Http\Controllers\VaultController;
+use App\Http\Controllers\WorkspaceController;
 use App\Http\RateLimiters\EmailLoginRateLimits;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +25,13 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/', fn () => redirect()->route('dashboard'));
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::get('/vaults', [VaultController::class, 'index'])->name('vaults.index');
+    Route::post('/vaults', [VaultController::class, 'store'])->name('vaults.store');
+    Route::patch('/vaults/{vault}', [VaultController::class, 'update'])->name('vaults.update');
+    Route::post('/vaults/{vault}/archive', [VaultArchiveController::class, 'store'])->name('vaults.archive');
+    Route::delete('/vaults/{vault}/archive', [VaultArchiveController::class, 'destroy'])->name('vaults.restore');
+    Route::delete('/vaults/{vault}', [VaultController::class, 'destroy'])->name('vaults.destroy');
     Route::post('/logout', [EmailLoginController::class, 'destroy'])->name('logout');
 });
