@@ -17,3 +17,8 @@
         background: color-mix(in srgb, oklch(52.7% 0.154 150.069) 28%, transparent);
     }
 }
+
+/* Dynamic interface states must override semantic element display defaults. */
+.hidden {
+    display: none !important;
+}

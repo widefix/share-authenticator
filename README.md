@@ -1,4 +1,6 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Shared Team Authenticator
+
+Passwordless team access to encrypted shared TOTP authenticators, built with Laravel.
 
 <p align="center">
 <a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
@@ -8,6 +10,15 @@
 </p>
 
 ## Local development
+
+Generate the independent vault encryption key and run migrations once:
+
+```bash
+php artisan vault:key
+php artisan migrate
+```
+
+The key wraps one random data-encryption key per vault. Back it up separately from the database; losing it makes saved authenticators unrecoverable. Never commit `.env`.
 
 Start Mailpit, which captures development email without delivering it to the
 internet:
@@ -26,6 +37,15 @@ The application is available at [http://127.0.0.1:8001](http://127.0.0.1:8001)
 and the Mailpit inbox at [http://127.0.0.1:8025](http://127.0.0.1:8025).
 Login emails are queued, so the queue worker included in `composer run dev`
 must remain running.
+
+## Authenticator support
+
+- Standard `otpauth://totp` QR codes and manual Base32 secrets.
+- SHA-1, SHA-256, and SHA-512; six or eight digits; periods from 15 to 300 seconds.
+- Camera and local PNG, JPEG, or WebP decoding. QR images are never uploaded.
+- Server-authorized reveal/copy operations with no-cache responses and audit events.
+
+HOTP, Steam Guard, Google Authenticator migration bundles, member invitations, and vault assignments are not implemented yet.
 
 ## About Laravel
 

@@ -52,8 +52,8 @@
                     <article class="p-5 sm:p-6">
                         <div class="flex items-start justify-between gap-5">
                             <div>
-                                <h3 class="font-semibold text-stone-950 dark:text-white">{{ $vault->name }}</h3>
-                                <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">0 authenticators · {{ $workspace->users_count }} {{ Str::plural('workspace member', $workspace->users_count) }}</p>
+                                <a href="{{ route('vaults.authenticators.index', $vault) }}" class="font-semibold text-stone-950 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-white">{{ $vault->name }}</a>
+                                <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">{{ $vault->authenticators_count }} authenticators · {{ $workspace->users_count }} {{ Str::plural('workspace member', $workspace->users_count) }}</p>
                             </div>
                             <span class="mt-1 size-2 rounded-full bg-emerald-500" aria-label="Active"></span>
                         </div>
@@ -78,7 +78,7 @@
                             <form method="POST" action="{{ route('vaults.destroy', $vault) }}" class="mt-4 rounded-xl bg-red-50 p-4 dark:bg-red-950/50" data-submitting-form>
                                 @csrf
                                 @method('DELETE')
-                                <p class="text-sm leading-6 text-red-900 dark:text-red-100">This permanently removes 0 authenticators and affects {{ $workspace->users_count }} {{ Str::plural('workspace member', $workspace->users_count) }}. Type <strong>{{ $vault->name }}</strong> to confirm.</p>
+                                <p class="text-sm leading-6 text-red-900 dark:text-red-100">This permanently removes {{ $vault->authenticators_count }} authenticators and affects {{ $workspace->users_count }} {{ Str::plural('workspace member', $workspace->users_count) }}. Type <strong>{{ $vault->name }}</strong> to confirm.</p>
                                 <div class="mt-3 flex flex-col gap-2 sm:flex-row">
                                     <label for="delete-vault-{{ $vault->id }}" class="sr-only">Type {{ $vault->name }} to confirm deletion</label>
                                     <input id="delete-vault-{{ $vault->id }}" name="confirmation" type="text" required autocomplete="off" class="h-10 min-w-0 flex-1 rounded-lg border border-red-300 bg-white px-3 text-sm text-stone-950 outline-none focus:border-red-600 focus:ring-3 focus:ring-red-600/15 dark:border-red-800 dark:bg-stone-950 dark:text-white">
@@ -103,7 +103,7 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h3 class="font-semibold text-stone-900 dark:text-stone-100">{{ $vault->name }}</h3>
-                                <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">0 authenticators · Archived {{ $vault->archived_at->diffForHumans() }}</p>
+                                <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">{{ $vault->authenticators_count }} authenticators · Archived {{ $vault->archived_at->diffForHumans() }}</p>
                             </div>
                             <form method="POST" action="{{ route('vaults.restore', $vault) }}" data-submitting-form>
                                 @csrf

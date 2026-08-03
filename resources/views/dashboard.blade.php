@@ -93,16 +93,16 @@
             @else
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($vaults as $vault)
-                        <article class="min-h-48 rounded-2xl bg-white p-6 shadow-[0_1px_0_rgba(41,37,36,0.06),0_14px_40px_rgba(41,37,36,0.06)] dark:bg-stone-900 dark:shadow-none">
+                        <a href="{{ route('vaults.authenticators.index', $vault) }}" class="group block min-h-48 rounded-2xl bg-white p-6 shadow-[0_1px_0_rgba(41,37,36,0.06),0_14px_40px_rgba(41,37,36,0.06)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-emerald-600 dark:bg-stone-900 dark:shadow-none">
                             <div class="flex items-start justify-between gap-4">
                                 <span class="grid size-11 place-items-center rounded-xl bg-emerald-50 text-lg font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" aria-hidden="true">
                                     {{ mb_strtoupper(mb_substr($vault->name, 0, 1)) }}
                                 </span>
-                                <span class="text-xs font-medium tabular-nums text-stone-400 dark:text-stone-500">0 codes</span>
+                                <span class="text-xs font-medium tabular-nums text-stone-400 dark:text-stone-500">{{ $vault->active_authenticators_count }} {{ Str::plural('code', $vault->active_authenticators_count) }}</span>
                             </div>
                             <h3 class="mt-8 text-xl font-semibold tracking-tight text-stone-950 dark:text-white">{{ $vault->name }}</h3>
-                            <p class="mt-1 text-sm text-stone-500 dark:text-stone-400">Authenticators are coming next.</p>
-                        </article>
+                            <p class="mt-1 text-sm text-stone-500 dark:text-stone-400">Open vault <span aria-hidden="true">→</span></p>
+                        </a>
                     @endforeach
                 </div>
             @endif

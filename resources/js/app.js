@@ -1,3 +1,6 @@
+import './authenticator-intake.js';
+import './authenticator-list.js';
+
 const formatDuration = (milliseconds) => {
     const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
     const minutes = Math.floor(totalSeconds / 60);
