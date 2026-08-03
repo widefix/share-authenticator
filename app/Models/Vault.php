@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['workspace_id', 'name', 'normalized_name', 'archived_at'])]
 class Vault extends Model
@@ -23,6 +25,16 @@ class Vault extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
+    }
+
+    public function authenticators(): HasMany
+    {
+        return $this->hasMany(Authenticator::class);
+    }
+
+    public function encryptionKey(): HasOne
+    {
+        return $this->hasOne(VaultEncryptionKey::class);
     }
 
     public function scopeActive(Builder $query): Builder
