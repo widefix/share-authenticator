@@ -19,4 +19,13 @@ enum AuditAction: string
     case AuthenticatorDeleted = 'authenticator.deleted';
     case AuthenticatorRevealed = 'authenticator.revealed';
     case AuthenticatorCopied = 'authenticator.copied';
+    case InvitationCreated = 'invitation.created';
+    case InvitationAccepted = 'invitation.accepted';
+    case InvitationRevoked = 'invitation.revoked';
+    case InvitationExpired = 'invitation.expired';
+    case MemberAccessUpdated = 'member.access_updated';
+    case MemberRemoved = 'member.removed';
+    case VaultAccessGranted = 'vault.access_granted';
+    case VaultAccessRevoked = 'vault.access_revoked';
+    case RotationTaskCreated = 'rotation_task.created';
 }

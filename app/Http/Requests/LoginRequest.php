@@ -4,27 +4,25 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class VerifyLoginCodeRequest extends FormRequest
+class LoginRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * @return array<string, array<int, string>>
-     */
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'digits:6'],
+            'email' => ['required', 'string', 'email:rfc', 'max:254'],
+            'password' => ['required', 'string'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'code' => trim((string) $this->input('code')),
+            'email' => mb_strtolower(trim((string) $this->input('email'))),
         ]);
     }
 }

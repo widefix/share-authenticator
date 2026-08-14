@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\WorkspaceRole;
 use App\Http\Requests\DeleteVaultRequest;
 use App\Http\Requests\StoreVaultRequest;
 use App\Http\Requests\UpdateVaultRequest;
@@ -28,8 +29,11 @@ final class VaultController extends Controller
             ->workspace()
             ->withCount('users')
             ->firstOrFail();
-        $activeVaults = $workspace->vaults()->active()->withCount('authenticators')->orderBy('name')->get();
-        $archivedVaults = $workspace->vaults()->archived()->withCount('authenticators')->orderBy('name')->get();
+        $activeVaults = $workspace->vaults()->active()->withCount(['authenticators', 'members'])->orderBy('name')->get();
+        $archivedVaults = $workspace->vaults()->archived()->withCount(['authenticators', 'members'])->orderBy('name')->get();
+        $adminCount = $workspace->users()->where('role', WorkspaceRole::Admin)->count();
+        $activeVaults->each(fn (Vault $vault) => $vault->setAttribute('accessible_members_count', $vault->members_count + $adminCount));
+        $archivedVaults->each(fn (Vault $vault) => $vault->setAttribute('accessible_members_count', $vault->members_count + $adminCount));
 
         return $this->responses->index($workspace, $activeVaults, $archivedVaults);
     }

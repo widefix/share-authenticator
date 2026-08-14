@@ -14,7 +14,7 @@ class VaultPolicy
 
     public function view(User $user, Vault $vault): bool
     {
-        return $this->manage($user, $vault);
+        return $user->canAccessVault($vault);
     }
 
     public function create(User $user): bool

@@ -145,7 +145,7 @@ final readonly class AuthenticatorService
 
     public function code(User $actor, Authenticator $authenticator, AuditAction $action): AuthenticatorCode
     {
-        $this->authorize($actor, $authenticator);
+        $this->authorizeAccess($actor, $authenticator);
         if ($authenticator->isArchived() || $authenticator->vault->isArchived()) {
             throw new AuthorizationException;
         }
@@ -180,6 +180,13 @@ final readonly class AuthenticatorService
     private function authorize(User $actor, Authenticator $authenticator): void
     {
         $this->authorizeVault($actor, $authenticator->vault);
+    }
+
+    private function authorizeAccess(User $actor, Authenticator $authenticator): void
+    {
+        if (! $actor->canAccessVault($authenticator->vault)) {
+            throw new AuthorizationException;
+        }
     }
 
     private function authorizeVault(User $actor, Vault $vault): void

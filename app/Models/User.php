@@ -3,19 +3,19 @@
 namespace App\Models;
 
 use App\Enums\WorkspaceRole;
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['email'])]
+#[Fillable(['email', 'password'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory;
 
     /**
      * Get the attributes that should be cast.
@@ -25,10 +25,14 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
             'role' => WorkspaceRole::class,
         ];
     }
+
+    protected $hidden = [
+        'password',
+    ];
 
     public function workspace(): BelongsTo
     {
@@ -38,5 +42,27 @@ class User extends Authenticatable
     public function isWorkspaceAdmin(): bool
     {
         return $this->role === WorkspaceRole::Admin;
+    }
+
+    public function vaults(): BelongsToMany
+    {
+        return $this->belongsToMany(Vault::class)
+            ->withPivot('granted_by_user_id')
+            ->withTimestamps();
+    }
+
+    public function sentWorkspaceInvitations(): HasMany
+    {
+        return $this->hasMany(WorkspaceInvitation::class, 'invited_by_user_id');
+    }
+
+    public function canAccessVault(Vault $vault): bool
+    {
+        if ($this->workspace_id !== $vault->workspace_id) {
+            return false;
+        }
+
+        return $this->isWorkspaceAdmin()
+            || $this->vaults()->whereKey($vault->getKey())->exists();
     }
 }

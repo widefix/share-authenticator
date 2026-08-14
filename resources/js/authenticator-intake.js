@@ -36,11 +36,7 @@ if (root) {
         tabs.forEach((tab) => {
             const selected = tab.dataset.intakeTab === name;
             tab.setAttribute('aria-selected', String(selected));
-            tab.classList.toggle('bg-white', selected);
-            tab.classList.toggle('text-stone-950', selected);
-            tab.classList.toggle('shadow-sm', selected);
-            tab.classList.toggle('dark:bg-stone-800', selected);
-            tab.classList.toggle('dark:text-white', selected);
+            tab.classList.toggle('segment-active', selected);
         });
         panels.forEach((panel) => panel.classList.toggle('hidden', panel.dataset.intakePanel !== name));
         if (name !== 'camera') stopCamera();

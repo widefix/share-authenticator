@@ -1,51 +1,89 @@
 <x-layouts.app :title="$vault->name">
-    <header class="flex flex-col gap-6 border-b border-stone-200 pb-8 sm:flex-row sm:items-end sm:justify-between dark:border-stone-800">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ route('dashboard') }}" class="link-quiet"><span aria-hidden="true">←</span> Vaults</a>
+        <span aria-hidden="true" class="text-hairline-input">/</span>
+        <span class="text-ink-secondary">{{ $vault->name }}</span>
+    </nav>
+
+    <header class="mt-4 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <a href="{{ route('dashboard') }}" class="text-sm font-medium text-stone-500 underline-offset-4 hover:text-stone-950 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-stone-400 dark:hover:text-white">← Back to dashboard</a>
-            <p class="mt-5 text-sm font-semibold text-emerald-700 dark:text-emerald-400">Vault</p>
-            <h1 class="mt-2 text-4xl font-semibold tracking-[-0.035em] text-stone-950 dark:text-white">{{ $vault->name }}</h1>
-            <p class="mt-3 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">Reveal only the code you need. Secrets remain encrypted and are never sent to this page.</p>
+            <p class="eyebrow">Vault</p>
+            <h1 class="display-xl mt-3 text-ink">{{ $vault->name }}</h1>
+            <p class="body-lead mt-3 max-w-xl">Reveal only the code you need. Secrets remain encrypted and are never sent to this page.</p>
         </div>
-        <a href="{{ route('vaults.authenticators.create', $vault) }}" class="inline-flex h-11 items-center justify-center rounded-xl bg-stone-900 px-5 text-sm font-semibold text-white outline-none transition-colors hover:bg-stone-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 active:translate-y-px dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-white dark:focus-visible:ring-offset-stone-950">Add authenticator</a>
+        @if (auth()->user()->isWorkspaceAdmin())
+            <a href="{{ route('vaults.authenticators.create', $vault) }}" class="btn btn-primary self-start sm:self-auto">
+                <span aria-hidden="true">+</span> Add authenticator
+            </a>
+        @endif
     </header>
 
     @if (session('status'))
-        <div class="mt-7 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100" role="status">{{ session('status') }}</div>
+        <div class="alert alert-success mt-7" role="status">{{ session('status') }}</div>
     @endif
 
     <section
-        class="mt-9"
+        class="mt-8"
         data-authenticator-index
         data-feed-url="{{ route('api.vaults.authenticators.index', $vault) }}"
         data-csrf-token="{{ csrf_token() }}"
     >
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div class="relative max-w-md flex-1">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="relative w-full max-w-md">
                 <label for="authenticator-search" class="sr-only">Search authenticators</label>
-                <input id="authenticator-search" type="search" autocomplete="off" placeholder="Search issuer or account" class="h-11 w-full rounded-xl border border-stone-300 bg-white px-4 text-sm text-stone-950 outline-none transition-colors placeholder:text-stone-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/15 dark:border-stone-700 dark:bg-stone-900 dark:text-white" data-authenticator-search>
+                <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-mute" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/>
+                </svg>
+                <input
+                    id="authenticator-search"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="Search issuer or account"
+                    class="input h-10 pl-9 pr-12"
+                    data-authenticator-search
+                >
+                <kbd class="pointer-events-none absolute right-3 top-1/2 max-sm:hidden block -translate-y-1/2 rounded border border-hairline bg-canvas-soft px-1.5 py-0.5 text-[0.6875rem] font-medium text-ink-mute">/</kbd>
             </div>
-            <p class="text-sm tabular-nums text-stone-500 dark:text-stone-400"><span data-active-count>{{ $vault->active_authenticators_count }}</span> active · <span data-archived-count>{{ $vault->archived_authenticators_count }}</span> archived</p>
+            <p class="caption whitespace-nowrap">
+                <span data-active-count>{{ $vault->active_authenticators_count }}</span> active
+                <span aria-hidden="true" class="mx-1 text-hairline-input">·</span>
+                <span data-archived-count>{{ $vault->archived_authenticators_count }}</span> archived
+            </p>
         </div>
 
-        <div class="mt-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900" data-authenticator-loading aria-live="polite">
-            <div class="animate-pulse space-y-4 p-6"><div class="h-5 w-40 rounded bg-stone-200 dark:bg-stone-800"></div><div class="h-12 rounded bg-stone-100 dark:bg-stone-950"></div></div>
+        <div class="mt-5 grid gap-4 lg:grid-cols-2" data-authenticator-loading aria-live="polite" aria-busy="true">
+            <span class="sr-only">Loading authenticators…</span>
+            @for ($placeholder = 0; $placeholder < 2; $placeholder++)
+                <div class="card p-5" aria-hidden="true">
+                    <div class="skeleton h-3 w-24"></div>
+                    <div class="skeleton mt-3 h-5 w-44"></div>
+                    <div class="skeleton mt-6 h-14 w-full"></div>
+                    <div class="skeleton mt-4 h-9 w-40"></div>
+                </div>
+            @endfor
         </div>
 
         <div class="hidden" data-authenticator-content>
-            <div class="grid gap-4 lg:grid-cols-2" data-active-list></div>
-            <div class="hidden rounded-2xl border border-dashed border-stone-300 px-6 py-14 text-center dark:border-stone-700" data-active-empty>
-                <p class="font-semibold text-stone-900 dark:text-stone-100">No authenticators found</p>
-                <p class="mt-2 text-sm text-stone-500 dark:text-stone-400">Add the first authenticator or adjust your search.</p>
+            <div class="mt-5 grid gap-4 lg:grid-cols-2" data-active-list></div>
+            <div class="panel-empty mt-5 hidden" data-active-empty>
+                <p class="heading-sm text-ink">No authenticators found</p>
+                <p class="body-mute mt-2">Add the first authenticator or adjust your search.</p>
+                @if (auth()->user()->isWorkspaceAdmin())
+                    <a href="{{ route('vaults.authenticators.create', $vault) }}" class="btn btn-secondary mt-5">Add authenticator</a>
+                @endif
             </div>
 
-            <section class="mt-14 hidden border-t border-stone-200 pt-9 dark:border-stone-800" data-archived-section>
-                <h2 class="text-xl font-semibold tracking-tight text-stone-950 dark:text-white">Archived authenticators</h2>
-                <div class="mt-5 grid gap-3 sm:grid-cols-2" data-archived-list></div>
+            <section class="mt-12 hidden border-t border-hairline pt-8" data-archived-section>
+                <h2 class="heading-md text-ink">Archived authenticators</h2>
+                <p class="body-mute mt-1">Archived entries stop generating codes until they are restored.</p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2" data-archived-list></div>
             </section>
         </div>
 
-        <div class="mt-6 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100" role="alert" data-authenticator-error></div>
-        <div class="mt-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100" role="status" data-clock-warning>Your device clock differs from the server. Enable automatic date and time to avoid confusing countdowns.</div>
+        <div class="alert alert-error mt-5 hidden" role="alert" data-authenticator-error></div>
+        <div class="alert alert-warning mt-5 hidden" role="status" data-clock-warning>
+            Your device clock differs from the server. Enable automatic date and time to avoid confusing countdowns.
+        </div>
         <p class="sr-only" aria-live="polite" data-authenticator-announcer></p>
     </section>
 </x-layouts.app>

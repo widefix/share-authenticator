@@ -3,21 +3,20 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
-class SendLoginCodeRequest extends FormRequest
+class RegisterRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * @return array<string, array<int, string>>
-     */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'max:254', 'email:rfc'],
+            'email' => ['required', 'string', 'email:rfc', 'max:254', 'unique:users,email'],
+            'password' => ['required', 'confirmed', Password::min(12)],
         ];
     }
 

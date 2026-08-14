@@ -4,6 +4,7 @@ namespace App\Services\Vaults;
 
 use App\Data\DeletedVault;
 use App\Enums\AuditAction;
+use App\Enums\WorkspaceRole;
 use App\Models\User;
 use App\Models\Vault;
 use App\Services\Audit\AuditLogger;
@@ -149,7 +150,8 @@ final readonly class VaultService
 
             $summary = new DeletedVault(
                 authenticatorCount: $vault->authenticators()->count(),
-                memberCount: $actor->workspace->users()->count(),
+                memberCount: $vault->members()->count()
+                    + $actor->workspace->users()->where('role', WorkspaceRole::Admin)->count(),
             );
 
             $this->audit->record(

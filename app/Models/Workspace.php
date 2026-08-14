@@ -34,4 +34,14 @@ class Workspace extends Model
     {
         return $this->hasMany(AuditEvent::class);
     }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(WorkspaceInvitation::class);
+    }
+
+    public function rotationTasks(): HasMany
+    {
+        return $this->hasMany(RotationTask::class);
+    }
 }

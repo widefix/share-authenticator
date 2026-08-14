@@ -9,12 +9,12 @@ class AuthenticatorPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->workspace_id !== null && $user->isWorkspaceAdmin();
+        return $user->workspace_id !== null;
     }
 
     public function view(User $user, Authenticator $authenticator): bool
     {
-        return $this->manage($user, $authenticator);
+        return $user->canAccessVault($authenticator->vault);
     }
 
     public function create(User $user): bool

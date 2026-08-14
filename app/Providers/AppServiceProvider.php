@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
+use App\Http\RateLimiters\AuthenticationRateLimits;
 use App\Http\RateLimiters\AuthenticatorCodeRateLimits;
-use App\Http\RateLimiters\EmailLoginRateLimits;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,10 +20,10 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(EmailLoginRateLimits $limits, AuthenticatorCodeRateLimits $authenticatorCodes): void
+    public function boot(AuthenticationRateLimits $authentication, AuthenticatorCodeRateLimits $authenticatorCodes): void
     {
-        RateLimiter::for(EmailLoginRateLimits::SEND, $limits->send(...));
-        RateLimiter::for(EmailLoginRateLimits::VERIFY, $limits->verify(...));
+        RateLimiter::for(AuthenticationRateLimits::LOGIN, $authentication->login(...));
+        RateLimiter::for(AuthenticationRateLimits::REGISTER, $authentication->register(...));
         RateLimiter::for(AuthenticatorCodeRateLimits::NAME, $authenticatorCodes(...));
     }
 }

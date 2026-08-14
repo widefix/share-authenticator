@@ -30,9 +30,13 @@ final readonly class AuthenticatorController
     {
         Gate::authorize('view', $vault);
 
+        $archivedCount = $request->user()->isWorkspaceAdmin()
+            ? fn ($query) => $query->archived()
+            : fn ($query) => $query->whereRaw('1 = 0');
+
         return $this->responses->index($vault->loadCount([
             'authenticators as active_authenticators_count' => fn ($query) => $query->active(),
-            'authenticators as archived_authenticators_count' => fn ($query) => $query->archived(),
+            'authenticators as archived_authenticators_count' => $archivedCount,
         ]));
     }
 

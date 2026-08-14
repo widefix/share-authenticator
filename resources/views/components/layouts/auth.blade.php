@@ -1,30 +1,35 @@
 <!DOCTYPE html>
-<html lang="en" class="scheme-light dark:scheme-dark">
+<html lang="en" class="scheme-light">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="color-scheme" content="light">
 
         <title>{{ $title ?? 'Sign in' }} | {{ config('app.name') }}</title>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="min-h-[100dvh] bg-stone-100 text-stone-950 antialiased dark:bg-stone-950 dark:text-stone-100">
-        <main class="grid min-h-[100dvh] place-items-center px-4 py-10 sm:px-6">
-            <div class="w-full max-w-md">
-                <div class="mb-8 inline-flex items-center gap-3 text-sm font-semibold text-stone-900 dark:text-stone-100">
-                    <span class="grid size-9 place-items-center rounded-xl bg-emerald-700 text-xs font-bold tracking-tight text-white dark:bg-emerald-500 dark:text-stone-950" aria-hidden="true">SA</span>
-                    <span>Shared Authenticator</span>
+    <body class="min-h-[100dvh] bg-canvas-soft antialiased">
+        <div class="relative min-h-[100dvh]">
+            <div aria-hidden="true" class="mesh pointer-events-none absolute inset-x-0 top-0 h-[26rem] [mask-image:linear-gradient(to_bottom,black,transparent)]"></div>
+
+            <main class="relative mx-auto grid min-h-[100dvh] max-w-md place-items-center px-5 py-12 sm:py-16">
+                <div class="w-full">
+                    <div class="mb-7 inline-flex items-center gap-2.5">
+                        <span class="brand-mark" aria-hidden="true">SA</span>
+                        <span class="text-[0.9375rem] font-medium tracking-tight text-ink">Shared Authenticator</span>
+                    </div>
+
+                    <section class="card card-raised p-6 sm:p-8">
+                        {{ $slot }}
+                    </section>
+
+                    <p class="caption mt-5 text-center">Your credentials are protected with secure password hashing and encrypted sessions.</p>
                 </div>
+            </main>
+        </div>
 
-                <section class="rounded-2xl border border-stone-200 bg-white p-6 shadow-[0_24px_70px_rgba(41,37,36,0.08)] sm:p-8 dark:border-stone-800 dark:bg-stone-900 dark:shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-                    {{ $slot }}
-                </section>
-
-                <p class="mt-6 text-center text-xs leading-5 text-stone-500 dark:text-stone-400">
-                    We only use your email to verify your identity and secure your session.
-                </p>
-            </div>
-        </main>
+        <div class="toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
     </body>
 </html>

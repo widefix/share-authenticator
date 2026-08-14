@@ -16,7 +16,11 @@ final readonly class AuthenticatorFeedController
     public function __invoke(Request $request, Vault $vault): JsonResponse
     {
         Gate::authorize('view', $vault);
-        $items = $vault->authenticators()->orderBy('id')->get()->map(fn ($authenticator) => [
+        $query = $vault->authenticators()->orderBy('id');
+        if (! $request->user()->isWorkspaceAdmin()) {
+            $query->active();
+        }
+        $items = $query->get()->map(fn ($authenticator) => [
             'authenticator' => $authenticator,
             'data' => $this->cipher->decrypt($authenticator),
         ]);

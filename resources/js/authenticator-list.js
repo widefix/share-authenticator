@@ -1,7 +1,10 @@
+import { showToast } from './toast.js';
+
 const root = document.querySelector('[data-authenticator-index]');
 
 if (root) {
     const csrf = root.dataset.csrfToken;
+    const search = root.querySelector('[data-authenticator-search]');
     const activeList = root.querySelector('[data-active-list]');
     const archivedList = root.querySelector('[data-archived-list]');
     const announcer = root.querySelector('[data-authenticator-announcer]');
@@ -32,6 +35,11 @@ if (root) {
         return element;
     };
 
+    const report = (message, tone = 'neutral') => {
+        announcer.textContent = message;
+        showToast(message, tone);
+    };
+
     const showCode = async (item, card, purpose = 'reveal') => {
         const button = card.querySelector(`[data-${purpose}]`);
         button.disabled = true;
@@ -40,7 +48,7 @@ if (root) {
             const code = payload.data.code;
             if (purpose === 'copy') {
                 await navigator.clipboard.writeText(code);
-                announcer.textContent = `${item.issuer} code copied.`;
+                report(`${item.issuer} code copied.`);
                 button.textContent = 'Copied';
                 window.setTimeout(() => { button.textContent = 'Copy'; }, 1600);
             } else {
@@ -53,7 +61,7 @@ if (root) {
                 button.textContent = 'Refresh';
             }
         } catch (caught) {
-            announcer.textContent = caught instanceof Error ? caught.message : 'The code could not be retrieved.';
+            report(caught instanceof Error ? caught.message : 'The code could not be retrieved.', 'error');
         } finally {
             button.disabled = false;
         }
@@ -61,46 +69,64 @@ if (root) {
 
     const activeCard = (item) => {
         const card = document.createElement('article');
-        card.className = 'rounded-2xl bg-white p-5 shadow-[0_12px_36px_rgba(41,37,36,0.06)] dark:bg-stone-900 dark:shadow-none';
-        card.innerHTML = `<div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold tracking-[0.1em] text-emerald-700 uppercase dark:text-emerald-400" data-issuer></p><h2 class="mt-2 text-lg font-semibold text-stone-950 dark:text-white" data-account></h2><p class="mt-1 text-xs text-stone-400" data-settings></p></div><a class="rounded-lg px-3 py-2 text-sm font-medium text-stone-500 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:hover:bg-stone-800" data-edit>Edit</a></div><div class="mt-6 hidden rounded-xl bg-stone-950 p-4 text-white" data-code-panel><div class="flex items-center justify-between gap-4"><code class="text-2xl font-semibold tracking-[0.16em] tabular-nums" data-code></code><span class="text-xs tabular-nums text-stone-400" data-countdown></span></div><div class="mt-3 h-1 overflow-hidden rounded bg-stone-800"><div class="h-full bg-emerald-500" data-progress></div></div></div><div class="mt-5 flex flex-wrap items-center gap-2"><button type="button" class="h-10 rounded-lg bg-stone-900 px-4 text-sm font-semibold text-white hover:bg-stone-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-60 dark:bg-stone-100 dark:text-stone-950" data-reveal>Reveal</button><button type="button" class="h-10 rounded-lg border border-stone-300 px-4 text-sm font-semibold hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-60 dark:border-stone-700 dark:hover:bg-stone-800" data-copy>Copy</button><span class="ml-auto" data-archive></span></div>`;
+        card.className = 'card p-5';
+        card.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="eyebrow truncate" data-issuer></p><h2 class="heading-md mt-1.5 truncate text-ink" data-account></h2><p class="caption mt-1" data-settings></p></div><a class="btn btn-ghost btn-sm" data-edit>Edit</a></div><div class="code-panel mt-5 hidden" data-code-panel><div class="flex items-center justify-between gap-4"><code class="code-value" data-code></code><span class="caption tabular text-white/70" data-countdown></span></div><div class="code-track mt-3"><div class="code-bar" data-progress></div></div></div><div class="mt-5 flex flex-wrap items-center gap-2"><button type="button" class="btn btn-primary btn-sm" data-reveal>Show code</button><button type="button" class="btn btn-neutral btn-sm" data-copy>Copy</button><span class="ml-auto" data-archive></span></div>`;
         card.querySelector('[data-issuer]').textContent = item.issuer;
         card.querySelector('[data-account]').textContent = item.account;
         card.querySelector('[data-settings]').textContent = `${item.algorithm} · ${item.digits} digits · ${item.period}s`;
-        card.querySelector('[data-edit]').href = item.edit_url;
+        const edit = card.querySelector('[data-edit]');
+        if (item.can_manage) {
+            edit.href = item.edit_url;
+        } else {
+            edit.remove();
+        }
         card.querySelector('[data-reveal]').addEventListener('click', () => showCode(item, card));
         card.querySelector('[data-copy]').addEventListener('click', () => showCode(item, card, 'copy'));
-        card.querySelector('[data-archive]').append(form(item.archive_url, 'POST', 'Archive', 'h-10 rounded-lg px-3 text-sm font-medium text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800'));
+        if (item.can_manage) {
+            card.querySelector('[data-archive]').append(form(item.archive_url, 'POST', 'Archive', 'btn btn-ghost btn-sm'));
+        }
         return card;
     };
 
     const archivedCard = (item) => {
         const card = document.createElement('article');
-        card.className = 'rounded-xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900';
-        const heading = document.createElement('h3'); heading.className = 'font-semibold'; heading.textContent = `${item.issuer}: ${item.account}`;
+        card.className = 'card p-5';
+        const heading = document.createElement('h3'); heading.className = 'heading-sm text-ink'; heading.textContent = `${item.issuer}: ${item.account}`;
         const actions = document.createElement('div'); actions.className = 'mt-4 flex items-center gap-2';
-        actions.append(form(item.restore_url, 'DELETE', 'Restore', 'h-10 rounded-lg px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950'));
-        const details = document.createElement('details'); details.className = 'ml-auto';
-        const summary = document.createElement('summary'); summary.className = 'cursor-pointer text-sm font-medium text-red-700 dark:text-red-400'; summary.textContent = 'Delete';
-        const deleteForm = form(item.delete_url, 'DELETE', 'Delete permanently', 'mt-3 h-10 rounded-lg bg-red-700 px-3 text-sm font-semibold text-white');
-        const confirm = document.createElement('input'); confirm.name = 'confirmation'; confirm.required = true; confirm.placeholder = `${item.issuer}: ${item.account}`; confirm.className = 'mt-3 h-10 w-full rounded-lg border border-red-300 bg-white px-3 text-sm text-stone-950 dark:border-red-800 dark:bg-stone-950 dark:text-white';
-        deleteForm.prepend(confirm); details.append(summary, deleteForm); actions.append(details); card.append(heading, actions);
+        actions.append(form(item.restore_url, 'DELETE', 'Restore', 'btn btn-secondary btn-sm'));
+        const details = document.createElement('details'); details.className = 'mt-3 border-t border-hairline pt-3';
+        const summary = document.createElement('summary'); summary.className = 'text-sm font-medium text-ruby-deep'; summary.textContent = 'Delete';
+        const deleteForm = form(item.delete_url, 'DELETE', 'Delete permanently', 'btn btn-danger btn-sm mt-3 w-full');
+        deleteForm.className = 'alert-danger-zone mt-3';
+        const hint = document.createElement('p'); hint.className = 'text-xs leading-5 text-ruby-deep'; hint.textContent = 'Type the full name to permanently delete this authenticator.';
+        const confirm = document.createElement('input'); confirm.name = 'confirmation'; confirm.required = true; confirm.placeholder = `${item.issuer}: ${item.account}`; confirm.className = 'input mt-3';
+        deleteForm.prepend(hint, confirm); details.append(summary, deleteForm); card.append(heading, actions, details);
         return card;
     };
 
     const render = () => {
-        const query = root.querySelector('[data-authenticator-search]').value.trim().toLocaleLowerCase();
+        const query = search.value.trim().toLocaleLowerCase();
         const filtered = authenticators.filter((item) => `${item.issuer} ${item.account}`.toLocaleLowerCase().includes(query));
         const active = filtered.filter((item) => !item.archived);
         const archived = filtered.filter((item) => item.archived);
         activeList.replaceChildren(...active.map(activeCard));
         archivedList.replaceChildren(...archived.map(archivedCard));
+        activeList.classList.toggle('hidden', active.length === 0);
         root.querySelector('[data-active-empty]').classList.toggle('hidden', active.length > 0);
         root.querySelector('[data-archived-section]').classList.toggle('hidden', archived.length === 0);
         root.querySelector('[data-active-count]').textContent = authenticators.filter((item) => !item.archived).length;
         root.querySelector('[data-archived-count]').textContent = authenticators.filter((item) => item.archived).length;
     };
 
-    root.querySelector('[data-authenticator-search]').addEventListener('input', render);
+    search.addEventListener('input', render);
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+        const target = event.target;
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+        event.preventDefault();
+        search.focus();
+    });
 
     fetch(root.dataset.feedUrl, { headers: { Accept: 'application/json' } })
         .then((response) => response.ok ? response.json() : Promise.reject())
@@ -127,8 +153,11 @@ if (root) {
                 showCode(timer.item, timer.card);
                 return;
             }
-            timer.card.querySelector('[data-countdown]').textContent = `${Math.ceil(remaining / 1000)}s`;
-            timer.card.querySelector('[data-progress]').style.width = `${Math.max(0, Math.min(100, remaining / (timer.item.period * 10)))}%`;
+            const seconds = Math.ceil(remaining / 1000);
+            timer.card.querySelector('[data-countdown]').textContent = `${seconds}s`;
+            const bar = timer.card.querySelector('[data-progress]');
+            bar.style.width = `${Math.max(0, Math.min(100, remaining / (timer.item.period * 10)))}%`;
+            bar.classList.toggle('code-bar-urgent', seconds <= 5);
         });
     }, 250);
 }

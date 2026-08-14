@@ -10,19 +10,19 @@ class UserSchemaTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_users_are_identified_only_by_email(): void
+    public function test_users_use_email_and_password_credentials(): void
     {
         $this->assertSame([
             'id',
             'email',
-            'email_verified_at',
             'created_at',
             'updated_at',
             'workspace_id',
             'role',
+            'password',
         ], Schema::getColumnListing('users'));
 
         $this->assertFalse(Schema::hasTable('password_reset_tokens'));
-        $this->assertTrue(Schema::hasTable('email_login_codes'));
+        $this->assertFalse(Schema::hasTable('email_login_codes'));
     }
 }
