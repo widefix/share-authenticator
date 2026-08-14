@@ -31,7 +31,7 @@ The first release is intended for teams of approximately 2–20 people that need
 - **Vault:** A named collection of shared authenticators, such as Engineering, Finance, or Client A.
 - **Authenticator:** An encrypted TOTP seed and its associated display and algorithm settings.
 - **Rotation:** Replacing an authenticator seed at the originating third-party service.
-- **Email login code:** A short-lived, single-use code sent to a user's email to verify identity and start a session.
+- **Invitation link:** A single-use, expiring URL bound to an email address and used to join a workspace.
 
 ## 3. Roles and authorization
 
@@ -55,43 +55,43 @@ All admins are peers. The workspace creator becomes its first admin. The last re
 
 ### 4.1 Registration, login, and session security
 
-#### AUTH-01 — Request a sign-in code
+#### AUTH-01 — Register an account
 
-As a user, I want to enter only my email address so that I can sign in without creating or remembering a password.
+As a new user, I want to register with my email address and password so that I can create or join a workspace.
 
 **Acceptance criteria**
 
-- A valid email request creates a six-digit login challenge and queues an email notification.
+- Public registration is available without an invitation.
 - Email addresses are trimmed and normalized to lowercase before lookup or storage.
-- Requesting a code does not create a user record.
-- Only one active code exists per email, and issuing a new code invalidates the previous code.
-- Codes expire after ten minutes and are stored only as a slow hash of a server-peppered value.
-- Responses do not disclose whether the email already belongs to a user.
-- A user must wait 60 seconds before requesting another code.
+- Email addresses are unique across accounts.
+- Passwords require at least 12 characters and confirmation.
+- Passwords are stored only through Laravel's one-way password hashing cast.
+- A successful registration starts a session and regenerates the session ID.
+- Registration requests are rate-limited by IP address.
 
-#### AUTH-02 — Verify a sign-in code
+#### AUTH-02 — Sign in with a password
 
-As a user, I want to enter the code from my email so that I can verify my address and start an authenticated session.
-
-**Acceptance criteria**
-
-- A valid code creates the user when the normalized email is new.
-- A valid code sets `email_verified_at`, consumes the challenge, authenticates the user, and regenerates the session ID.
-- An existing user signs in without creating a duplicate record.
-- Invalid, expired, consumed, or superseded codes are rejected.
-- Five incorrect attempts invalidate the active challenge.
-- Verification uses the pending email and challenge stored in the session, not client-provided identity fields.
-
-#### AUTH-03 — Resend a sign-in code
-
-As a user, I want to request a replacement code so that I can continue if the original email is delayed or unavailable.
+As a registered user, I want to sign in with my email address and password so that I can access my workspace.
 
 **Acceptance criteria**
 
-- Resend is unavailable until the 60-second cooldown ends.
-- A replacement code receives a new challenge generation and invalidates all older codes.
-- Superseded queued notifications are discarded before delivery.
-- Send and verification attempts are rate-limited by hashed email and IP identifiers.
+- Login uses Laravel's session guard and password verification.
+- Successful login regenerates the session ID.
+- Invalid credentials receive a neutral error that does not disclose whether the account exists.
+- Login attempts are limited to five per minute for each normalized email and IP combination.
+- Remember-me login is not offered in V1.
+
+#### AUTH-03 — Register from an invitation
+
+As an invited person without an account, I want to create my password from the invitation link so that I can join the intended workspace directly.
+
+**Acceptance criteria**
+
+- The invitation link fixes the account email and does not trust an editable email field.
+- A new account is created only after a valid, unexpired invitation and valid password submission.
+- An existing account must sign in before it can accept an invitation.
+- A legacy account without a password may set one through its valid invitation link.
+- Successful invitation registration accepts the invitation, starts a session, and regenerates the session ID.
 
 #### AUTH-04 — End and expire sessions
 
@@ -118,12 +118,15 @@ As a new user, I want to create a workspace so that I can organize my team's aut
 
 #### TEAM-02 — Invite a member
 
-As an admin, I want to invite someone by email and select their vault access so that they can use the authenticators required for their work.
+As an admin, I want to create an invitation link for an email address and select its vault access so that I can share access without requiring application email delivery.
 
 **Acceptance criteria**
 
 - An admin can choose the invited user's role and initial vault assignments.
 - An invitation is single-use, expires, and is bound to the invited email address.
+- The raw invitation token is shown only when the link is created; persistence stores only its SHA-256 hash.
+- The application does not email the link. The admin copies and shares it through a channel of their choice.
+- An invitation may target an email that already has an account, including an account currently attached to another workspace.
 - Vault access is granted only after the invitation is accepted by the intended email address.
 - Given an expired, revoked, modified, or already accepted invitation, when acceptance is attempted, then access is denied.
 - Accepted, expired, and revoked invitations are recorded in the audit log.
@@ -304,7 +307,7 @@ As an admin, I want to review access and change history so that I can investigat
 - Admins can filter events by user, vault, event type, and date.
 - Events include actor, action, affected resource identifier, timestamp, and result.
 - Events cover reveal, copy, membership changes, vault changes, authenticator changes, invitations, access revocation, and rotation completion.
-- Audit details must never contain email login codes, TOTP seeds, generated codes, or decrypted labels unless those labels are encrypted for authorized admins.
+- Audit details must never contain invitation tokens, passwords, TOTP seeds, generated codes, or decrypted labels unless those labels are encrypted for authorized admins.
 
 #### AUDIT-02 — Detect audit-log modification
 
@@ -419,11 +422,11 @@ V1 does not claim to protect against:
 
 V1 is ready for release when:
 
-- A new admin can verify an email, create a workspace, add an authenticator, create a vault, and invite a member.
+- A new admin can register, create a workspace, add an authenticator, create a vault, and generate an invitation link.
 - The invited member can sign in and reveal or copy codes only from assigned vaults.
 - TOTP output passes RFC test vectors for all supported algorithms and digit counts.
 - Automated tests demonstrate that APIs, logs, databases, analytics, and backups do not contain plaintext secrets or codes.
-- Passwordless login, role changes, revocation, audit verification, and rotation workflows pass end-to-end tests.
+- Password login, invitation acceptance, role changes, revocation, audit verification, and rotation workflows pass end-to-end tests.
 - Camera denial, malformed QR codes, invalid manual input, expired invitations, clock drift, and network failures have safe and understandable outcomes.
 - Accessibility testing confirms the core journeys meet WCAG 2.2 AA.
 - Independent security review findings classified as critical or high have been resolved.
@@ -447,6 +450,7 @@ V1 is ready for release when:
 - All admins are trusted with potential access to all workspace vaults.
 - Authenticator codes are hidden until individually revealed or copied.
 - The service is online-only in V1.
-- Authentication uses a six-digit email code with a ten-minute expiry, five attempts, and a 60-second resend cooldown.
+- Authentication uses normalized email addresses and passwords of at least 12 characters. Login is limited to five attempts per email and IP combination each minute.
+- Registration is public. Workspace invitation links are single-use, expire after seven days, and are shared manually rather than emailed.
 - V1 uses managed envelope encryption; detailed vault encryption implementation remains future work.
 - Rotation is completed at the originating service by an admin and tracked through an in-product checklist.

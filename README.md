@@ -1,98 +1,134 @@
 # Shared Team Authenticator
 
-Passwordless team access to encrypted shared TOTP authenticators, built with Laravel.
+A web application for teams to organize and share authenticator codes through
+workspaces and vaults.
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Run it locally
 
-## Local development
+### Requirements
 
-Generate the independent vault encryption key and run migrations once:
+- PHP 8.3 or newer with SQLite and Sodium support.
+- Composer 2.
+- Node.js 20.19+ or 22.12+ with npm.
+- Git.
+
+### Installation
+
+Clone the repository and install its dependencies:
 
 ```bash
+git clone <repository-url> shared-team-authenticator
+cd shared-team-authenticator
+composer install
+npm ci
+```
+
+Create the local configuration and SQLite database.
+
+On macOS or Linux:
+
+```bash
+cp .env.example .env
+touch database/database.sqlite
+```
+
+On Windows Command Prompt:
+
+```bat
+copy .env.example .env
+type nul > database\database.sqlite
+```
+
+Finish the initial setup:
+
+```bash
+php artisan key:generate
 php artisan vault:key
 php artisan migrate
 ```
 
-The key wraps one random data-encryption key per vault. Back it up separately from the database; losing it makes saved authenticators unrecoverable. Never commit `.env`.
-
-Start Mailpit, which captures development email without delivering it to the
-internet:
-
-```bash
-docker compose up -d mailpit
-```
-
-Then start Laravel, the database queue worker, and Vite:
+Start the application:
 
 ```bash
 composer run dev
 ```
 
-The application is available at [http://127.0.0.1:8001](http://127.0.0.1:8001)
-and the Mailpit inbox at [http://127.0.0.1:8025](http://127.0.0.1:8025).
-Login emails are queued, so the queue worker included in `composer run dev`
-must remain running.
+Open <http://127.0.0.1:8001/register> and create your first account. Keep the
+terminal open while using the application and press `Ctrl+C` to stop it.
 
-## Authenticator support
-
-- Standard `otpauth://totp` QR codes and manual Base32 secrets.
-- SHA-1, SHA-256, and SHA-512; six or eight digits; periods from 15 to 300 seconds.
-- Camera and local PNG, JPEG, or WebP decoding. QR images are never uploaded.
-- Server-authorized reveal/copy operations with no-cache responses and audit events.
-
-HOTP, Steam Guard, Google Authenticator migration bundles, member invitations, and vault assignments are not implemented yet.
-
-## About Laravel
-
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
-
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+To start the same installation again later, run:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer run dev
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Backups
 
-## Contributing
+Your local data is stored in `database/database.sqlite`, and the keys required
+to read it are stored in `.env`. Stop the application and back up both files
+together.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Never commit `.env`, regenerate its keys after saving data, or run
+`php artisan migrate:fresh` on an installation you want to keep.
 
-## Code of Conduct
+## Updating
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Back up your data, stop the application, and run:
 
-## Security Vulnerabilities
+```bash
+git pull --ff-only
+composer install
+npm ci
+php artisan migrate
+composer run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
+
+```bash
+composer test
+npm test
+npm run build
+```
+
+## Troubleshooting
+
+### The SQLite database does not exist
+
+Create `database/database.sqlite` and run:
+
+```bash
+php artisan migrate
+```
+
+### Port 8001 is already in use
+
+Run Laravel and Vite separately on another port:
+
+```bash
+php artisan serve --host=127.0.0.1 --port=8010
+```
+
+```bash
+npm run dev
+```
+
+Then open <http://127.0.0.1:8010>.
+
+### Configuration changes are not taking effect
+
+```bash
+php artisan optimize:clear
+```
+
+Restart the application afterward.
+
+## Public deployment
+
+The local development server is only available from your computer. Publishing
+the application on a network or the internet requires a separate production
+deployment with HTTPS and a production web server.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT
