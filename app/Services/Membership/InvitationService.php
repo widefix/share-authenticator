@@ -8,6 +8,7 @@ use App\Enums\RotationReason;
 use App\Enums\WorkspaceRole;
 use App\Models\User;
 use App\Models\Vault;
+use App\Models\Workspace;
 use App\Models\WorkspaceInvitation;
 use App\Services\Audit\AuditLogger;
 use App\Services\Rotation\RotationTaskService;
@@ -103,14 +104,18 @@ final readonly class InvitationService
                 throw new AuthorizationException;
             }
 
-            if ($user->workspace_id !== null) {
-                $this->leaveCurrentWorkspace($user);
-            }
+            $emptiedWorkspace = $user->workspace_id !== null
+                ? $this->leaveCurrentWorkspace($user)
+                : null;
 
             $user->forceFill([
                 'workspace_id' => $invitation->workspace_id,
                 'role' => $invitation->role,
             ])->save();
+
+            // The user's workspace_id must move off the old workspace before it is
+            // deleted, since users.workspace_id is a restrict-on-delete foreign key.
+            $emptiedWorkspace?->delete();
 
             $user->vaults()->syncWithPivotValues(
                 $invitation->role === WorkspaceRole::Member ? $invitation->vaults()->pluck('vaults.id')->all() : [],
@@ -244,9 +249,24 @@ final readonly class InvitationService
         }
     }
 
-    private function leaveCurrentWorkspace(User $user): void
+    /**
+     * Detaches the user from their current workspace, scheduling rotations for
+     * whatever they could access. Returns the workspace when it has no other
+     * members left, so the caller can delete it once the user has moved on.
+     */
+    private function leaveCurrentWorkspace(User $user): ?Workspace
     {
         $workspace = $user->workspace;
+
+        $memberCount = User::query()
+            ->where('workspace_id', $workspace->getKey())
+            ->lockForUpdate()
+            ->get()
+            ->count();
+
+        if ($memberCount <= 1) {
+            return $workspace;
+        }
 
         if ($user->isWorkspaceAdmin()) {
             $adminCount = User::query()
@@ -275,5 +295,7 @@ final readonly class InvitationService
         );
         $this->audit->record($workspace, $user, AuditAction::MemberRemoved, $user);
         $user->vaults()->detach();
+
+        return null;
     }
 }

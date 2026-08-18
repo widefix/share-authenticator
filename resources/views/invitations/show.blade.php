@@ -13,7 +13,11 @@
 
         @if ($user->workspace_id)
             <div class="alert alert-warning mt-6" role="status">
-                Accepting this invitation moves your account out of <strong>{{ $user->workspace->name }}</strong>. Your previous vault access will be revoked and its administrators may need to rotate authenticators you could access.
+                @if ($user->workspace->users()->count() === 1)
+                    Accepting this invitation moves your account out of <strong>{{ $user->workspace->name }}</strong>. You are its only member, so that workspace and everything in it — vaults, authenticators, and history — will be permanently deleted.
+                @else
+                    Accepting this invitation moves your account out of <strong>{{ $user->workspace->name }}</strong>. Your previous vault access will be revoked and its administrators may need to rotate authenticators you could access.
+                @endif
             </div>
         @endif
 

@@ -168,10 +168,27 @@ class MembershipManagementTest extends TestCase
         ]);
     }
 
-    public function test_existing_last_admin_can_be_invited_but_cannot_abandon_their_workspace(): void
+    public function test_sole_member_accepting_an_invitation_deletes_their_old_workspace(): void
+    {
+        [$soleAdmin, $oldWorkspace] = $this->workspace();
+        $soleAdmin->forceFill(['email' => 'sole-admin@example.com'])->save();
+        [$newAdmin, $newWorkspace, $newVault] = $this->workspace();
+        [$invitation, $token] = $this->invite($newAdmin, $soleAdmin->email, [$newVault->id]);
+
+        $this->actingAs($soleAdmin)
+            ->post(route('invitations.accept', [$invitation, $token]))
+            ->assertRedirect();
+
+        $this->assertSame($newWorkspace->id, $soleAdmin->fresh()->workspace_id);
+        $this->assertNotNull($invitation->fresh()->accepted_at);
+        $this->assertModelMissing($oldWorkspace);
+    }
+
+    public function test_last_admin_of_a_multi_member_workspace_cannot_abandon_it(): void
     {
         [$lastAdmin, $oldWorkspace] = $this->workspace();
         $lastAdmin->forceFill(['email' => 'last-admin@example.com'])->save();
+        User::factory()->create(['workspace_id' => $oldWorkspace->id, 'role' => WorkspaceRole::Member]);
         [$newAdmin, $newWorkspace, $newVault] = $this->workspace();
         [$invitation, $token] = $this->invite($newAdmin, $lastAdmin->email, [$newVault->id]);
 
@@ -181,6 +198,7 @@ class MembershipManagementTest extends TestCase
 
         $this->assertSame($oldWorkspace->id, $lastAdmin->fresh()->workspace_id);
         $this->assertNull($invitation->fresh()->accepted_at);
+        $this->assertModelExists($oldWorkspace);
     }
 
     public function test_expired_and_revoked_invitations_are_denied_and_audited(): void
