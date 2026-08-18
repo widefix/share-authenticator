@@ -253,6 +253,7 @@ final readonly class InvitationService
                 ->where('workspace_id', $workspace->getKey())
                 ->where('role', WorkspaceRole::Admin)
                 ->lockForUpdate()
+                ->get()
                 ->count();
 
             if ($adminCount <= 1) {

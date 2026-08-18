@@ -7,7 +7,7 @@ workspaces and vaults.
 
 ### Requirements
 
-- PHP 8.3 or newer with SQLite and Sodium support.
+- PHP 8.4 or newer with SQLite and Sodium support.
 - Composer 2.
 - Node.js 20.19+ or 22.12+ with npm.
 - Git.
@@ -128,6 +128,9 @@ Restart the application afterward.
 The local development server is only available from your computer. Publishing
 the application on a network or the internet requires a separate production
 deployment with HTTPS and a production web server.
+
+See [Deploy with Kamal](docs/KAMAL.md) for the repository-specific production
+configuration.
 
 ## License
 
