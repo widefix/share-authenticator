@@ -18,31 +18,41 @@ export const canonicalSecret = (value) => {
     return secret;
 };
 
+// otpauth:// is not a special scheme (https://url.spec.whatwg.org/#special-scheme), so
+// engines are not required to parse an authority/host component for it the way they do
+// for http(s) — WebKit in particular has been inconsistent about it (e.g. `totp` landing
+// in the pathname instead of the hostname). Parse the otpauth://TYPE/LABEL?QUERY structure
+// from the text directly instead of relying on URL#hostname to carry the type.
+const OTPAUTH_PATTERN = /^otpauth:\/\/([^/?#]+)\/([^?#]*)(?:\?([^#]*))?/iu;
+
 export const parseOtpAuthUri = (value) => {
-    let url;
-    try {
-        url = new URL(String(value).trim());
-    } catch {
+    const normalized = String(value).replace(/[\t\r\n]+/gu, '').trim();
+    const match = OTPAUTH_PATTERN.exec(normalized);
+
+    if (!match) {
         throw new Error('Enter a valid otpauth://totp URI.');
     }
 
-    if (url.protocol !== 'otpauth:' || url.hostname.toLowerCase() !== 'totp') {
+    const [, type, rawLabel, rawQuery] = match;
+
+    if (type.toLowerCase() !== 'totp') {
         throw new Error('Only time-based otpauth://totp URIs are supported.');
     }
 
-    const label = decodeURIComponent(url.pathname.replace(/^\//u, ''));
+    const label = decodeURIComponent(rawLabel);
     const colon = label.indexOf(':');
     const labelIssuer = colon >= 0 ? label.slice(0, colon).trim() : '';
     const account = colon >= 0 ? label.slice(colon + 1).trim() : label.trim();
-    const queryIssuer = (url.searchParams.get('issuer') ?? '').trim();
+    const params = new URLSearchParams(rawQuery ?? '');
+    const queryIssuer = (params.get('issuer') ?? '').trim();
 
     if (labelIssuer && queryIssuer && labelIssuer !== queryIssuer) {
         throw new Error('The issuer in the label and issuer parameter must match.');
     }
 
-    const algorithm = (url.searchParams.get('algorithm') ?? 'SHA1').toUpperCase();
-    const digits = Number(url.searchParams.get('digits') ?? 6);
-    const period = Number(url.searchParams.get('period') ?? 30);
+    const algorithm = (params.get('algorithm') ?? 'SHA1').toUpperCase();
+    const digits = Number(params.get('digits') ?? 6);
+    const period = Number(params.get('period') ?? 30);
 
     if (!['SHA1', 'SHA256', 'SHA512'].includes(algorithm)) throw new Error('Choose SHA1, SHA256, or SHA512.');
     if (![6, 8].includes(digits)) throw new Error('Codes must contain 6 or 8 digits.');
@@ -51,7 +61,7 @@ export const parseOtpAuthUri = (value) => {
     return {
         issuer: cleanLabel(queryIssuer || labelIssuer, 'Issuer'),
         account: cleanLabel(account, 'Account'),
-        secret: canonicalSecret(url.searchParams.get('secret')),
+        secret: canonicalSecret(params.get('secret')),
         algorithm,
         digits,
         period,
