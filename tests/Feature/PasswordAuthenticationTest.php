@@ -125,6 +125,21 @@ class PasswordAuthenticationTest extends TestCase
         $this->get(route('dashboard'))->assertOk()->assertSee($user->email);
     }
 
+    public function test_https_is_detected_behind_the_deployment_proxy(): void
+    {
+        $response = $this
+            ->withHeaders([
+                'X-Forwarded-Host' => 'authenticator.example.com',
+                'X-Forwarded-Proto' => 'https',
+            ])
+            ->get(route('register'));
+
+        $response
+            ->assertOk()
+            ->assertSee('https://authenticator.example.com/build/assets/', false)
+            ->assertDontSee('http://authenticator.example.com/build/assets/', false);
+    }
+
     public function test_user_can_log_out(): void
     {
         $user = User::factory()->create();

@@ -18,6 +18,23 @@ describe('otpauth URI parsing', () => {
         expect(() => parseOtpAuthUri('otpauth://totp/One:a?secret=JBSWY3DPEHPK3PXP&issuer=Two')).toThrow(/must match/u);
     });
 
+    it('parses a dotted domain-like label without mistaking it for the host (issue #3)', () => {
+        const uri = 'otpauth://totp/phabricator.stagingdns.co.uk:andrey?secret=QWNF56TSWTLZEA5YKPVBTX2Y27QBIJWX&issuer=phabricator.stagingdns.co.uk';
+        expect(parseOtpAuthUri(uri)).toEqual({
+            issuer: 'phabricator.stagingdns.co.uk', account: 'andrey', secret: 'QWNF56TSWTLZEA5YKPVBTX2Y27QBIJWX', algorithm: 'SHA1', digits: 6, period: 30,
+        });
+    });
+
+    it('accepts an uppercase scheme and strips whitespace pasted mid-URI', () => {
+        const uri = 'OTPAUTH://TOTP/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example';
+        expect(parseOtpAuthUri(`  ${uri.slice(0, 20)}\n${uri.slice(20)}  `)).toMatchObject({ issuer: 'Example', account: 'alice@example.com' });
+    });
+
+    it('rejects non-otpauth input', () => {
+        expect(() => parseOtpAuthUri('https://example.com')).toThrow(/valid otpauth/u);
+        expect(() => parseOtpAuthUri('not a uri at all')).toThrow(/valid otpauth/u);
+    });
+
     it('canonicalizes padded and spaced Base32', () => {
         expect(canonicalSecret('jbsw y3dp ehpk3pxp====')).toBe('JBSWY3DPEHPK3PXP');
     });
