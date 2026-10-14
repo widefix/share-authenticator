@@ -3,6 +3,10 @@
 A web application for teams to organize and share authenticator codes through
 workspaces and vaults.
 
+<img width="1507" height="1044" alt="WideFix members and codes redacted-1" src="https://github.com/user-attachments/assets/5f9af625-92e9-4597-8841-c1b59386a07d" />
+<img width="1532" height="1027" alt="WideFix authenticator dashboard with redactions-2" src="https://github.com/user-attachments/assets/713f64a4-f3ca-4ae5-94b2-fc77d152c451" />
+
+
 ## Run it locally
 
 ### Requirements
