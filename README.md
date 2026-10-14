@@ -134,4 +134,4 @@ configuration.
 
 ## License
 
-MIT
+Built by the [WideFix team](https://widefix.com/team) for our own internal use, this tool helps teammates access shared accounts independently, without waiting for someone else to provide an authentication code. You’re welcome to use and adapt it for your own team under the MIT license.
