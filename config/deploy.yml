@@ -1,0 +1,73 @@
+service: share-authenticator
+image: share-authenticator
+
+servers:
+  web:
+    - 178.104.63.39
+
+proxy:
+  ssl: true
+  host: auth.widefix.com
+  app_port: 80
+  healthcheck:
+    path: /up
+    interval: 3
+    timeout: 5
+
+registry:
+  server: localhost:5556
+
+ssh:
+  user: root
+<% if ENV["KAMAL_SSH_KEY"] %>
+  keys:
+    - <%= ENV["KAMAL_SSH_KEY"] %>
+  keys_only: true
+<% end %>
+
+builder:
+  arch: amd64
+  context: .
+
+env:
+  clear:
+    APP_NAME: Shared Team Authenticator
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_URL: https://auth.widefix.com
+    LOG_CHANNEL: stderr
+    LOG_LEVEL: warning
+    DB_CONNECTION: pgsql
+    DB_HOST: share-authenticator-postgres
+    DB_PORT: "5432"
+    DB_DATABASE: share_authenticator
+    DB_USERNAME: share_authenticator
+    CACHE_STORE: database
+    SESSION_DRIVER: database
+    SESSION_ENCRYPT: "true"
+    SESSION_SECURE_COOKIE: "true"
+    SESSION_SAME_SITE: lax
+    QUEUE_CONNECTION: sync
+  secret:
+    - APP_KEY
+    - VAULT_ENCRYPTION_KEY
+    - DB_PASSWORD
+
+aliases:
+  shell: app exec --interactive --reuse "sh"
+  artisan: app exec --primary --reuse "php artisan"
+  logs: app logs --follow
+  migrate: app exec --primary --reuse "php artisan migrate --force"
+
+accessories:
+  postgres:
+    image: postgres:17-bookworm
+    host: 178.104.63.39
+    env:
+      clear:
+        POSTGRES_DB: share_authenticator
+        POSTGRES_USER: share_authenticator
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
