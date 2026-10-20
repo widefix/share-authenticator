@@ -49,6 +49,7 @@ Finish the initial setup:
 php artisan key:generate
 php artisan vault:key
 php artisan migrate
+php artisan user:create-admin admin@example.com --workspace="My team"
 ```
 
 Start the application:
@@ -57,7 +58,7 @@ Start the application:
 composer run dev
 ```
 
-Open <http://127.0.0.1:8001/register> and create your first account. Keep the
+Open <http://127.0.0.1:8001/login> and sign in with the account created above. Keep the
 terminal open while using the application and press `Ctrl+C` to stop it.
 
 To start the same installation again later, run:
@@ -139,3 +140,20 @@ configuration.
 ## License
 
 Built by the [WideFix team](https://widefix.com/team) for our own internal use, this tool helps teammates access shared accounts independently, without waiting for someone else to provide an authentication code. You’re welcome to use and adapt it for your own team under the MIT license.
+
+### Initial administrator in Docker / Kamal
+
+After the container starts and migrations finish, run:
+
+```bash
+kamal app exec --interactive --reuse 'php artisan user:create-admin admin@example.com --workspace="My team"'
+# Or, with Docker directly:
+docker exec -it <container> php artisan user:create-admin admin@example.com --workspace="My team"
+```
+
+The command prompts for a password and confirmation without echoing them. It only
+works on an installation with no users. Public signup is disabled; administrators
+invite additional members through workspace invitations.
+
+Login is limited to 5 attempts per minute per email/IP pair, 20 per minute per IP,
+and 30 per hour per email across IPs. Limits use the configured shared cache.

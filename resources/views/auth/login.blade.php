@@ -57,7 +57,4 @@
         </button>
     </form>
 
-    <p class="body-mute mt-6 text-center">
-        New here? <a href="{{ route('register') }}" class="font-medium text-primary hover:underline">Create an account</a>
-    </p>
 </x-layouts.auth>

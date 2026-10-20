@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\AuthenticatorCodeController;
 use App\Http\Controllers\Api\AuthenticatorFeedController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AuthenticatorArchiveController;
 use App\Http\Controllers\AuthenticatorController;
 use App\Http\Controllers\DashboardController;
@@ -23,10 +22,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware(ThrottleRequests::using(AuthenticationRateLimits::LOGIN))
         ->name('login.store');
-    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store'])
-        ->middleware(ThrottleRequests::using(AuthenticationRateLimits::REGISTER))
-        ->name('register.store');
     Route::post('/invitations/{invitation}/{token}/register', [WorkspaceInvitationController::class, 'register'])
         ->middleware(ThrottleRequests::using(AuthenticationRateLimits::REGISTER))
         ->name('invitations.register');

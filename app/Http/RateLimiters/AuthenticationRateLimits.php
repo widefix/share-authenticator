@@ -14,17 +14,20 @@ final readonly class AuthenticationRateLimits
 
     public function __construct(private AuthenticationResponseFactory $responses) {}
 
-    public function login(Request $request): Limit
+    /** @return array<int, Limit> */
+    public function login(Request $request): array
     {
         $email = mb_strtolower(trim((string) $request->input('email')));
-        $key = hash('sha256', $email.'|'.($request->ip() ?? 'unknown'));
+        $ip = $request->ip() ?? 'unknown';
+        $response = fn (Request $request, array $headers) => $this->responses->rateLimited(
+            (int) ($headers['Retry-After'] ?? 60), $headers,
+        );
 
-        return Limit::perMinute(5)
-            ->by($key)
-            ->response(fn (Request $request, array $headers) => $this->responses->rateLimited(
-                (int) ($headers['Retry-After'] ?? 60),
-                $headers,
-            ));
+        return [
+            Limit::perMinute(5)->by('pair:'.hash('sha256', $email.'|'.$ip))->response($response),
+            Limit::perMinute(20)->by('ip:'.hash('sha256', $ip))->response($response),
+            Limit::perHour(30)->by('account:'.hash('sha256', $email))->response($response),
+        ];
     }
 
     public function register(Request $request): Limit

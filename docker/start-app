@@ -4,5 +4,8 @@ set -eu
 php artisan migrate --force
 php artisan optimize
 
+# Bootstrap accounts explicitly with user:create-admin through an interactive CLI.
+# Never create accounts or accept bootstrap passwords in the web entrypoint.
+
 exec frankenphp run --config /etc/frankenphp/Caddyfile
 
