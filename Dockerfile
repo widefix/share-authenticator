@@ -29,11 +29,13 @@ RUN composer dump-autoload \
     --no-interaction
 
 
-FROM dunglas/frankenphp:1-php8.4-bookworm AS application
+# PHP 8.4.27 security release: CVE-2026-109618 and CVE-2026-109619.
+FROM dunglas/frankenphp:1-php8.4-bookworm@sha256:49369ff211d81dc30a15890d58c0651d639aef0d9c0a9b91bcc6f387a77bd7a2 AS application
 
 WORKDIR /app
 
-RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.4.27", ">=") ? 0 : 1);' \
+    && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && install-php-extensions intl opcache pdo_pgsql
 
 COPY --from=dependencies /app /app
